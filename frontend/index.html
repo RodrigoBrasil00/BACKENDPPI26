@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro de Cursos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h2 class="mb-4">Cadastro de Cursos</h2>
+
+    
+    <div id="alert" class="alert d-none"></div>
+
+    
+    <form id="formCurso">
+        <input type="hidden" id="id">
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Nome</label>
+                <input type="text" id="nome" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Instrutor</label>
+                <input type="text" id="instrutor" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label>Descrição</label>
+            <textarea id="descricao" class="form-control"></textarea>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label>Data Início</label>
+                <input type="date" id="data_inicio" class="form-control" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Preço</label>
+                <input type="number" id="preco" class="form-control" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Vagas</label>
+                <input type="number" id="vagas_totais" class="form-control" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Nível</label>
+                <select id="nivel" class="form-control">
+                    <option value="iniciante">Iniciante</option>
+                    <option value="intermediario">Intermediário</option>
+                    <option value="avancado">Avançado</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+
+    
+    <h3 class="mt-5">Cursos Cadastrados</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Instrutor</th>
+                <th>Preço</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaCursos"></tbody>
+    </table>
+</div>
+
+<script>
+const API = 'http://localhost:3000/api/cursos';
+
+
+function mostrarMensagem(msg, tipo='success'){
+    const alert = document.getElementById('alert');
+    alert.className = `alert alert-${tipo}`;
+    alert.innerText = msg;
+    alert.classList.remove('d-none');
+    setTimeout(()=> alert.classList.add('d-none'), 3000);
+}
+
+
+async function listarCursos(){
+    const res = await fetch(API);
+    const data = await res.json();
+
+    const tabela = document.getElementById('tabelaCursos');
+    tabela.innerHTML = '';
+
+    data.dados.forEach(curso => {
+        tabela.innerHTML += `
+            <tr>
+                <td>${curso.id}</td>
+                <td>${curso.nome}</td>
+                <td>${curso.instrutor}</td>
+                <td>${curso.preco}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="editar(${curso.id})">Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="deletar(${curso.id})">Excluir</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+
+document.getElementById('formCurso').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const id = document.getElementById('id').value;
+
+    const curso = {
+        nome: nome.value,
+        descricao: descricao.value,
+        data_inicio: data_inicio.value,
+        preco: parseFloat(preco.value),
+        instrutor: instrutor.value,
+        vagas_totais: parseInt(vagas_totais.value),
+        vagas_disponiveis: parseInt(vagas_totais.value),
+        nivel: nivel.value
+    };
+
+    if(!curso.nome || !curso.preco){
+        mostrarMensagem('Preencha os campos obrigatórios', 'danger');
+        return;
+    }
+
+    if(id){
+        await fetch(`${API}/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(curso)
+        });
+        mostrarMensagem('Atualizado com sucesso');
+    } else {
+        await fetch(API, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(curso)
+        });
+        mostrarMensagem('Criado com sucesso');
+    }
+
+    formCurso.reset();
+    listarCursos();
+});
+
+
+async function editar(id){
+    const res = await fetch(`${API}/${id}`);
+    const data = await res.json();
+
+    const c = data.dados;
+
+    document.getElementById('id').value = c.id;
+    nome.value = c.nome;
+    descricao.value = c.descricao;
+    data_inicio.value = c.data_inicio.split('/').reverse().join('-');
+    preco.value = c.preco;
+    instrutor.value = c.instrutor;
+    vagas_totais.value = c.vagas_totais;
+    nivel.value = c.nivel;
+}
+
+
+async function deletar(id){
+    if(!confirm('Deseja excluir?')) return;
+
+    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    mostrarMensagem('Deletado com sucesso');
+    listarCursos();
+}
+
+listarCursos();
+</script>
+
+</body>
+</html>
